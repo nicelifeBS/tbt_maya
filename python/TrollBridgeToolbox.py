@@ -11,8 +11,13 @@ logger = logging.getLogger('TrollBridgeToolbox')
 mayaMainWindowPtr = omui.MQtUtil.mainWindow()
 mayaMainWindow= wrapInstance(long(mayaMainWindowPtr), QWidget)
 
-RESOLUTION = {'final': [2048, 878],
-              'draft': [1024, 439]}
+SETTINGS = {
+              'final': {'res': [2048, 878],
+                        'aa_samples': 8
+                        },
+              'draft': {'res': [1024, 439],
+                        'aa_samples': 2},
+              }
 
 class MainWindow(QWidget):
     def __init__(self, parent=None):
@@ -52,8 +57,7 @@ class MainWindow(QWidget):
         pm.loadPlugin('mtoa.bundle')
 
         # Set render resolution
-        self.set_resolution('final')
-
+        self.set_render_settings('final')
 
         # set gamma to 1.0
         pm.SCENE.defaultArnoldRenderOptions.display_gamma.set(1.0)
@@ -65,22 +69,14 @@ class MainWindow(QWidget):
         pm.SCENE.defaultRenderGlobals.animation.set(True)
         pm.SCENE.defaultRenderGlobals.periodInExt.set(1)
 
+        # Todo: set start end frame range
+
     def preview_setup(self):
         """
         Set render settings to draft settings
         :return:
         """
-        # get resolution
-        w = pm.SCENE.defaultResolution.width.get()
-        h = pm.SCENE.defaultResolution.height.get()
-        self.resolution = w, h
-
-        # set resolution to draft
-        self.set_resolution('draft')
-
-        # change AA samples
-        self.aa_samples = pm.SCENE.defaultArnoldRenderOptions.AASamples.get()
-        pm.SCENE.defaultArnoldRenderOptions.AASamples.set(3)
+        self.set_render_settings('draft')
 
     def final_setup(self):
         """
@@ -88,19 +84,19 @@ class MainWindow(QWidget):
         changed
         :return:
         """
-        if self.resolution:
-            self.set_resolution('final')
-        if self.aa_samples:
-            pm.SCENE.defaultArnoldRenderOptions.AASamples.set(self.aa_samples)
+        self.set_render_settings('final')
 
-    def set_resolution(self, preset, pixel_ar=1.0):
-        if preset in RESOLUTION.keys():
-            width, height = RESOLUTION[preset]
+    def set_render_settings(self, preset, pixel_ar=1.0):
+        if preset in SETTINGS.keys():
+            settings = SETTINGS[preset]
         else:
             return
 
+        width, height = settings['res']
+
         pm.SCENE.defaultResolution.width.set(width)
         pm.SCENE.defaultResolution.height.set(height)
+        pm.SCENE.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
         pm.SCENE.defaultResolution.pixelAspect.set(pixel_ar)
 
 def open():
