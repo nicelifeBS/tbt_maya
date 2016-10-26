@@ -3,14 +3,16 @@ from PySide.QtCore import *
 from PySide.QtGui import *
 from shiboken import wrapInstance
 
+import os
 import logging
+
+import YetiHelpers
+reload(YetiHelpers)
+
 logger = logging.getLogger('YetiToolbox')
 
 mayaMainWindowPtr = omui.MQtUtil.mainWindow()
 mayaMainWindow= wrapInstance(long(mayaMainWindowPtr), QWidget)
-
-import YetiHelpers
-reload(YetiHelpers)
 
 
 class LineEdit(QWidget):
@@ -99,6 +101,7 @@ class YetiMainWidget(QWidget):
 
         # Open setting dialog for export
         output_path = YetiHelpers.get_project_dir(_type='fileCache')
+        output_path = os.path.join(output_path, 'yeti')
         dialog = ExportDialog(time_range, samples=3, output_path=output_path, parent=self)
 
         if dialog.exec_():

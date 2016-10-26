@@ -74,11 +74,15 @@ def create_cache(node, _range=(1, 3), samples=3, cache_dir=None):
     """
 
     # create output file name
-    file_name = node.getParent().name()
+    file_name = node.getParent().name().replace(':', '_')
     file_name += '.%04d.fur'
     # Set the output directory if not defined
+    # and create it if needed
     if not cache_dir:
         cache_dir = get_project_dir(_type='fileCache')
+    else:
+        if not os.path.exists(cache_dir):
+            os.mkdir(cache_dir)
     file_name = os.path.join(cache_dir, file_name)
     logger.info('time range: {_range}, samples: {samples}'.format(_range=_range, samples=samples))
 
