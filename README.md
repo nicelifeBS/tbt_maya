@@ -15,5 +15,5 @@ e.g. PYTHONPATH = /path/to/tbt_maya/python
 
 You can find the maya.env file here:
 
-- Windows drive:\Users\username\Documents\maya\version
-- Mac OS X /Users/username/Library/Preferences/Autodesk/maya/version
+- **Windows** drive:\Users\username\Documents\maya\version
+- **Mac OS X** /Users/username/Library/Preferences/Autodesk/maya/version
