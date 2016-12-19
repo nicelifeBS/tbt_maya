@@ -6,6 +6,33 @@ import pymel.core as pm
 
 logger = logging.getLogger('YetiToolbox')
 
+def change_location(location):
+
+    sel = pm.ls(selection=True)
+    for s in sel:
+        shape = s.getShape()
+        if shape.type() == 'pgYetiMaya':
+            cache = shape.cacheFileName.get()
+            rel = cache.split('/')[-2:]
+            cache_new = os.path.join(location, '/'.join(rel))
+
+            image = shape.imageSearchPath.get()
+            rel = image.split('/')[-1:]
+            image_new = os.path.join(location, '/'.join(rel))
+
+            # check if path is valid
+            if os.path.exists(cache_new):
+                shape.cacheFileName.set(cache_new)
+                logger.info('Changed {} -> {}'.format(cache, cache_new))
+            else:
+                logger.error('Error: path {} does not exist'.format(cache_new))
+
+            if os.path.exists(image_new):
+                shape.imageSearchPath.set(image_new)
+                logger.info('Changed {} -> {}'.format(cache, image_new))
+            else:
+                logger.error('Error: path {} does not exist'.format(image_new))
+
 def get_project_dir(_type=None):
     """
     Returns the project directory or a file rule path defined as type
@@ -36,8 +63,15 @@ def get_yeti_nodes(selection=False):
     :return:
     """
     data = []
-    if selection:
-        for s in pm.selected():
+    if isinstance(selection, list):
+        selected = selection
+    elif isinstance(selection, bool):
+        selected = pm.selected()
+    else:
+        data = pm.ls(type='pgYetiMaya')
+
+    if not data:
+        for s in selected:
             if s.type() == 'pgYetiMaya':
                 data.append(s)
                 continue
@@ -47,8 +81,6 @@ def get_yeti_nodes(selection=False):
                 continue
             if shape.type() == 'pgYetiMaya':
                 data.append(shape)
-    else:
-        data = pm.ls(type='pgYetiMaya')
 
     return data
 
@@ -72,7 +104,8 @@ def create_cache(node, _range=(1, 3), samples=3, cache_dir=None):
     :param node:
     :return:
     """
-
+    # select the node
+    pm.select(node)
     # create output file name
     file_name = node.getParent().name().replace(':', '_')
     file_name += '.%04d.fur'
@@ -102,8 +135,8 @@ def create_cache(node, _range=(1, 3), samples=3, cache_dir=None):
     # Create cache
     logger.info('Writing cache: {}'.format(file_name))
     cmd = 'pgYetiCommand -writeCache "{file_path}" -range {start} {stop} -samples {samples}'
-    pm.mel.eval(cmd.format(file_path=file_name, start=_range[0], stop=_range[1], samples=3))
-
+    pm.mel.eval(cmd.format(file_path=file_name, start=int(_range[0]), stop=int(_range[1]), samples=3))
+    print 'cmd: ', cmd.format(file_path=file_name, start=int(_range[0]), stop=int(_range[1]), samples=3)
     # Add notes and original groom file to a custom attribute
     if groom_file:
         try:

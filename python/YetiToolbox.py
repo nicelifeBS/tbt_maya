@@ -109,7 +109,7 @@ class YetiMainWidget(QWidget):
             samples = dialog.samples
             output_path = dialog.output_path
             # iterate through nodes and create the caches
-            print time_range, samples, output_path
+            #print time_range, samples, output_path
             for n in nodes:
                 YetiHelpers.create_cache(n, _range=time_range, samples=samples, cache_dir=output_path)
 
