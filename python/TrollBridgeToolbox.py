@@ -95,7 +95,6 @@ class MainWindow(QWidget):
         # Set render resolution
         pm.SCENE.defaultResolution.aspectLock.set(0)
         self.set_render_settings('final')
-        pm.SCENE.defaultResolution.aspectLock.set(1)
 
         # set gamma to 1.0
         pm.SCENE.defaultArnoldRenderOptions.display_gamma.set(1.0)
@@ -183,10 +182,10 @@ class MainWindow(QWidget):
 
         width, height = settings['res']
 
+        pm.SCENE.defaultResolution.pixelAspect.set(pixel_ar)
         pm.SCENE.defaultResolution.width.set(width)
         pm.SCENE.defaultResolution.height.set(height)
         pm.SCENE.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
-        pm.SCENE.defaultResolution.pixelAspect.set(pixel_ar)
         pm.SCENE.defaultArnoldRenderOptions.GIDiffuseDepth.set(3)
         pm.SCENE.defaultArnoldRenderOptions.GIGlossyDepth.set(3)
 
