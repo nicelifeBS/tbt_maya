@@ -11,17 +11,20 @@ logger = logging.getLogger('TrollBridgeToolbox')
 mayaMainWindowPtr = omui.MQtUtil.mainWindow()
 mayaMainWindow= wrapInstance(long(mayaMainWindowPtr), QWidget)
 
-res_final = (2048.0, 858.0)
+
+RES_FINAL = (2048.0, 858.0)
+
 
 SETTINGS = {
-              'final': {'res': res_final,
+              'final': {'res': RES_FINAL,
                         'aa_samples': 10
                         },
-              'draft': {'res': [res_final[0]/2, res_final[1]/2],
+              'draft': {'res': [RES_FINAL[0] / 2, RES_FINAL[1] / 2],
                         'aa_samples': 2},
               'final_oar': {'res': (4480, 1920),
                             'aa_samples': 10},
               }
+
 
 class MainWindow(QWidget):
     def __init__(self, parent=None):
@@ -48,9 +51,15 @@ class MainWindow(QWidget):
         self.main_layout.addWidget(self.btn_project_setup)
 
         # camera height
+        h_line = QFrame()
+        h_line.setFrameStyle(QFrame.HLine)
+        self.main_layout.addWidget(h_line)
         self.btn_camera_setup = QPushButton('Set Camera')
         self.btn_camera_setup.clicked.connect(self.set_aspect_ratio)
         self.main_layout.addWidget(self.btn_camera_setup)
+
+        # Add frame range spin boxes
+        self.__setup_frame_range_widget()
 
         # Render settings
         self.__setup_render_settings()
@@ -84,8 +93,30 @@ class MainWindow(QWidget):
 
         self.main_layout.addWidget(group)
 
+    def __setup_frame_range_widget(self):
+
+        self.field_start_frame = QSpinBox()
+        self.field_start_frame.setValue(1)
+        self.field_end_frame = QSpinBox()
+        self.field_end_frame.setValue(50)
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(self.field_start_frame)
+        h_layout.addWidget(self.field_end_frame)
+
+        btn_set_frame_range = QPushButton('Set Frame Range')
+        btn_set_frame_range.clicked.connect(self.set_frame_range)
+
+        layout = QVBoxLayout()
+        layout.addLayout(h_layout)
+        layout.addWidget(btn_set_frame_range)
+
+        self.main_layout.addLayout(layout)
+
     def setup_project(self):
 
+        # get the scene instance
+        scene = pm.Scene()
+        
         # Set project fps
         pm.currentUnit(time='pal')
 
@@ -93,34 +124,45 @@ class MainWindow(QWidget):
         pm.loadPlugin('mtoa.bundle')
 
         # Set render resolution
-        pm.SCENE.defaultResolution.aspectLock.set(0)
+        scene.defaultResolution.aspectLock.set(0)
         self.set_render_settings('final')
 
         # set gamma to 1.0
-        pm.SCENE.defaultArnoldRenderOptions.display_gamma.set(1.0)
-        pm.SCENE.defaultArnoldRenderOptions.light_gamma.set(1.0)
-        pm.SCENE.defaultArnoldRenderOptions.shader_gamma.set(1.0)
-        pm.SCENE.defaultArnoldRenderOptions.texture_gamma.set(1.0)
+        scene.defaultArnoldRenderOptions.display_gamma.set(1.0)
+        scene.defaultArnoldRenderOptions.light_gamma.set(1.0)
+        scene.defaultArnoldRenderOptions.shader_gamma.set(1.0)
+        scene.defaultArnoldRenderOptions.texture_gamma.set(1.0)
 
         # set image folder structure
-        pm.SCENE.defaultRenderGlobals.imageFilePrefix.set('<Scene>/<RenderLayer>_<RenderPass>')
+        scene.defaultRenderGlobals.imageFilePrefix.set('<Scene>/<RenderLayer>_<RenderPass>')
         # activate animation and set file name to filename.#.exr
-        pm.SCENE.defaultRenderGlobals.animation.set(True)
-        pm.SCENE.defaultRenderGlobals.periodInExt.set(1)
+        scene.defaultRenderGlobals.animation.set(True)
+        scene.defaultRenderGlobals.putFrameBeforeExt.set(True)
+        scene.defaultRenderGlobals.periodInExt.set(1)
 
         # Shutter open on start frame
-        pm.SCENE.defaultArnoldRenderOptions.range_type.set(0)
+        scene.defaultArnoldRenderOptions.range_type.set(0)
         # Enable motion blur
-        pm.SCENE.defaultArnoldRenderOptions.motion_blur_enable.set(1)
+        scene.defaultArnoldRenderOptions.motion_blur_enable.set(1)
         # Display driver settings
-        pm.SCENE.defaultArnoldDriver.outputMode.set(2)
-        pm.SCENE.defaultArnoldDriver.mergeAOVs.set(1)
-        pm.SCENE.defaultArnoldDriver.prefix.set("<Scene>/<RenderLayer>")
+        scene.defaultArnoldDriver.outputMode.set(2)
+        scene.defaultArnoldDriver.mergeAOVs.set(1)
+        scene.defaultArnoldDriver.prefix.set("<Scene>/<RenderLayer>")
 
         # Set yeti plugin premel
-        pm.SCENE.defaultRenderGlobals.preMel.set("pgYetiPreRender")
-
+        scene.defaultRenderGlobals.preMel.set("pgYetiPreRender")
         # Todo: set start end frame range
+
+    def set_frame_range(self):
+        """Set the frame range in the maya scene and the render globals"""
+        start_f = int(self.field_start_frame.value())
+        end_f = int(self.field_end_frame.value())
+
+        # set timeline
+        pm.animation.playbackOptions(ast=start_f, aet=end_f, min=start_f, max=end_f)
+        # set the render globals
+        pm.SCENE.defaultRenderGlobals.startFrame.set(start_f)
+        pm.SCENE.defaultRenderGlobals.endFrame.set(end_f)
 
     def set_aspect_ratio(self):
         """
@@ -141,7 +183,7 @@ class MainWindow(QWidget):
                 # get the width of the film back
                 width = shape.horizontalFilmAperture.get()
                 # calculate the new width with our final render resolution
-                new_width = width * (res_final[1] / res_final[0])
+                new_width = width * (RES_FINAL[1] / RES_FINAL[0])
                 # set the width
                 shape.verticalFilmAperture.set(new_width)
                 print 'Changed height of film gate to '.format(new_width)
@@ -152,8 +194,11 @@ class MainWindow(QWidget):
         Set render settings to draft settings
         and disable motion blur
         """
+        # get the scene instance
+        scene = pm.Scene()
+
         self.set_render_settings('draft')
-        pm.SCENE.defaultArnoldRenderOptions.motion_blur_enable.set(0)
+        scene.defaultArnoldRenderOptions.motion_blur_enable.set(0)
 
     def final_setup(self):
         """
@@ -167,12 +212,15 @@ class MainWindow(QWidget):
         self.set_render_settings('final_oar')
 
     def final_render_animation(self):
+        # get the scene instance
+        scene = pm.Scene()
+
         self.set_render_settings('final')
         # enable motion blur
-        pm.SCENE.defaultArnoldRenderOptions.motion_blur_enable.set(1)
-        pm.SCENE.defaultArnoldRenderOptions.range_type.set(0)
-        pm.SCENE.defaultArnoldRenderOptions.outputOverscan.set('10%')
-        pm.SCENE.defaultArnoldDriver.mergeAOVs.set(1)
+        scene.defaultArnoldRenderOptions.motion_blur_enable.set(1)
+        scene.defaultArnoldRenderOptions.range_type.set(0)
+        scene.defaultArnoldRenderOptions.outputOverscan.set('10%')
+        scene.defaultArnoldDriver.mergeAOVs.set(1)
 
     def set_render_settings(self, preset, pixel_ar=1.0):
         if preset in SETTINGS.keys():
@@ -182,12 +230,17 @@ class MainWindow(QWidget):
 
         width, height = settings['res']
 
-        pm.SCENE.defaultResolution.pixelAspect.set(pixel_ar)
-        pm.SCENE.defaultResolution.width.set(width)
-        pm.SCENE.defaultResolution.height.set(height)
-        pm.SCENE.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
-        pm.SCENE.defaultArnoldRenderOptions.GIDiffuseDepth.set(3)
-        pm.SCENE.defaultArnoldRenderOptions.GIGlossyDepth.set(3)
+        # get the scene instance
+        scene = pm.Scene()
+
+        scene.defaultResolution.width.set(width)
+        scene.defaultResolution.height.set(height)
+        scene.defaultResolution.deviceAspectRatio.set(width / height)
+        # scene.defaultResolution.pixelAspect.set(pixel_ar)
+
+        scene.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
+        scene.defaultArnoldRenderOptions.GIDiffuseDepth.set(3)
+        scene.defaultArnoldRenderOptions.GIGlossyDepth.set(3)
 
 def open():
     dialog = MainWindow(parent=mayaMainWindow)
