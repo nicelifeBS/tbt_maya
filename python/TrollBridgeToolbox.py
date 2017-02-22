@@ -27,6 +27,7 @@ SETTINGS = {
 
 
 class MainWindow(QWidget):
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
@@ -59,12 +60,17 @@ class MainWindow(QWidget):
         self.main_layout.addWidget(self.btn_camera_setup)
 
         # Add frame range spin boxes
-        self.__setup_frame_range_widget()
+        self.__frame_range_widget()
+
+        # Setup renderpasses
+        btn_renderpasses = QPushButton('Setup Render Passes')
+        btn_renderpasses.clicked.connect(self.setup_render_layer)
+        self.main_layout.addWidget(btn_renderpasses)
 
         # Render settings
-        self.__setup_render_settings()
+        self.__render_settings_widget()
 
-    def __setup_render_settings(self):
+    def __render_settings_widget(self):
         """
         Render settings buttons grouped and added to main layout
         """
@@ -93,7 +99,7 @@ class MainWindow(QWidget):
 
         self.main_layout.addWidget(group)
 
-    def __setup_frame_range_widget(self):
+    def __frame_range_widget(self):
 
         self.field_start_frame = QSpinBox()
         self.field_start_frame.setValue(1)
@@ -152,6 +158,44 @@ class MainWindow(QWidget):
         # Set yeti plugin premel
         scene.defaultRenderGlobals.preMel.set("pgYetiPreRender")
         # Todo: set start end frame range
+
+    def setup_render_layer(self):
+
+        # select head yeti and lightsetup
+        select_ = [
+            '*:Yeti_grp',
+            '*:HorseHead',
+            #'__lightsetup*', todo: need solution if group is not present
+        ]
+
+        pm.select(select_)
+        try:
+            pm.nodetypes.RenderLayer.findLayerByName('head')
+        except:
+            head_rl = pm.createRenderLayer(name='head', empty=False)
+
+        try:
+            pm.nodetypes.RenderLayer.findLayerByName('bridle')
+        except:
+            bridle_rl = pm.createRenderLayer(name='bridle', empty=False)
+
+        # set overrides for head pass
+        head_rl.setCurrent()
+        pm.editRenderLayerAdjustment('*:layer_bridle.primaryVisibility', 'head')
+        pm.PyNode('*:layer_bridle').primaryVisibility.set(0)
+        pm.editRenderLayerAdjustment('*:layer_rein.primaryVisibility', 'head')
+        pm.PyNode('*:layer_rein').primaryVisibility.set(0)
+
+        # set override for bridle pass
+        bridle_rl.setCurrent()
+        pm.editRenderLayerAdjustment('*:layer_head.aiMatte', 'bridle')
+        pm.PyNode('*:layer_head').aiMatte.set(1)
+        pm.editRenderLayerAdjustment('*:Yeti_grp.visibility', 'bridle')
+        pm.PyNode('*:Yeti_grp').visibility.set(0)
+
+        # set the default layer active again
+        default_rl = pm.nodetypes.RenderLayer.defaultRenderLayer()
+        default_rl.setCurrent()
 
     def set_frame_range(self):
         """Set the frame range in the maya scene and the render globals"""
