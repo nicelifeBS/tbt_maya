@@ -1,5 +1,7 @@
 import pymel.core as pm
 
+import logging
+
 RES_FINAL = (2048.0, 858.0)
 
 
@@ -20,6 +22,8 @@ SETTINGS = {
 # startFrame
 # endFrame
 # renderSettings
+
+logger = logging.getLogger('tbt_settings')
 
 def set_status(attr, value):
     pm.setAttr('tbt_settings.' + attr, value)
@@ -48,22 +52,31 @@ def create_node(node_name):
     """
 
     # if there is already a node in the scene by query all user defined attrs
+
     try:
-        pm.PyNode(node_name).listAttr(ud=True)
+        attrs = pm.PyNode(node_name).listAttr(ud=True)
     except pm.MayaNodeError:
         node = pm.createNode('', n=node_name)
     else:
-        # we exit if the node is present
+        # update older nodes
+        node = pm.PyNode(node_name)
+        pm.lockNode(node, lock=False)
+        attr_names = [x.name() for x in attrs]
+        if 'tbt_settings.sceneName' not in attr_names:
+            node.addAttr('sceneName', dt='string')
+            logger.info('Added new attribute: sceneName')
+        pm.lockNode(node, lock=True)
+
         return
 
     node.addAttr('projectSetup', attributeType='bool')
     node.addAttr('setCamera', attributeType='bool')
     node.addAttr('renderPasses', attributeType='bool')
-
     node.addAttr('frameRange', attributeType='bool')
     node.addAttr('startFrame', attributeType='float')
     node.addAttr('endFrame', attributeType='float')
     node.addAttr('renderSettings', dt='string')
+    node.addAttr('sceneName', dt='string')
 
     pm.lockNode(node, lock=True)
 
@@ -104,10 +117,10 @@ def setup_project():
     # Display driver settings
     scene.defaultArnoldDriver.outputMode.set(2)
     scene.defaultArnoldDriver.mergeAOVs.set(1)
-    scene.defaultArnoldDriver.prefix.set("<Scene>/<RenderLayer>")
+    scene.defaultArnoldDriver.prefix.set('<Scene>/<RenderLayer>')
 
     # Set yeti plugin premel
-    scene.defaultRenderGlobals.preMel.set("pgYetiPreRender")
+    scene.defaultRenderGlobals.preMel.set('pgYetiPreRender')
     set_status('projectSetup', 1)
 
 
@@ -134,6 +147,8 @@ def setup_render_layer():
 
     # set overrides for head pass
     head_rl.setCurrent()
+    pm.editRenderLayerAdjustment('*:Yeti_grp.visibility', 'head')
+    pm.PyNode('*:Yeti_grp').visibility.set(1)
     pm.editRenderLayerAdjustment('*:layer_bridle.primaryVisibility', 'head')
     pm.PyNode('*:layer_bridle').primaryVisibility.set(0)
     pm.editRenderLayerAdjustment('*:layer_rein.primaryVisibility', 'head')
@@ -149,7 +164,21 @@ def setup_render_layer():
     # set the default layer active again
     default_rl = pm.nodetypes.RenderLayer.defaultRenderLayer()
     default_rl.setCurrent()
+    # make the default render layer not renderable
+    default_rl.renderable.set(0)
     set_status('renderPasses', 1)
+
+
+def get_frame_range():
+    """Get the start and end frame of the rendering
+
+    Returns:
+        tuple(float, float): Start and end frame of frame range
+    """
+    start = pm.SCENE.defaultRenderGlobals.startFrame.get()
+    end = pm.SCENE.defaultRenderGlobals.endFrame.get()
+
+    return start, end
 
 
 def set_frame_range(start_frame, end_frame):
@@ -259,3 +288,28 @@ def set_render_settings(preset, pixel_ar=1.0):
     scene.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
     scene.defaultArnoldRenderOptions.GIDiffuseDepth.set(3)
     scene.defaultArnoldRenderOptions.GIGlossyDepth.set(3)
+
+
+def render_current_frame():
+    start_f = pm.SCENE.defaultRenderGlobals.startFrame.get()
+    end_f = pm.SCENE.defaultRenderGlobals.endFrame.get()
+    current_frame = pm.currentTime()
+
+    pm.SCENE.defaultRenderGlobals.startFrame.set(current_frame)
+    pm.SCENE.defaultRenderGlobals.endFrame.set(current_frame)
+    pm.mel.eval('mayaBatchRender();')
+    # reset frame settings
+    pm.SCENE.defaultRenderGlobals.startFrame.set(start_f)
+    pm.SCENE.defaultRenderGlobals.endFrame.set(end_f)
+
+
+def get_filename():
+    """Return the scene name and scene extension"""
+    scene_name = pm.sceneName()
+    name, ext = scene_name.basename().splitext()
+    return name, ext
+
+
+def set_file_name(name):
+    set_status('sceneName', name)
+    pm.SCENE.defaultArnoldDriver.prefix.set('<Scene>/{}_<RenderLayer>'.format(name))
