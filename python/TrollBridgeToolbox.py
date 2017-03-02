@@ -52,14 +52,14 @@ class MainWindow(QWidget):
 
         # filename input
         label = QLabel('File name prefix')
-        edit_filename = QLineEdit()
-        edit_filename.textEdited.connect(self.update_filename)
+        self.edit_filename = QLineEdit()
+        self.edit_filename.textEdited.connect(self.update_filename)
         # get the set filename
         status = tbt_utils.get_status(self.node_name)
-        edit_filename.setText(status.get(self.node_name+'.sceneName', ''))
+        self.edit_filename.setText(status.get(self.node_name+'.sceneName', ''))
         layout = QHBoxLayout()
         layout.addWidget(label)
-        layout.addWidget(edit_filename)
+        layout.addWidget(self.edit_filename)
         self.main_layout.addLayout(layout)
 
         # Default project settings button
@@ -150,8 +150,10 @@ class MainWindow(QWidget):
 
         self.field_start_frame = QSpinBox()
         self.field_start_frame.setValue(1)
+        self.field_start_frame.setMaximum(1000)
         self.field_end_frame = QSpinBox()
         self.field_end_frame.setValue(50)
+        self.field_end_frame.setMaximum(1000)
         h_layout = QHBoxLayout()
         h_layout.addWidget(self.field_start_frame)
         h_layout.addWidget(self.field_end_frame)
@@ -202,7 +204,7 @@ class MainWindow(QWidget):
         tbt_utils.render_current_frame()
 
     def setup_project(self):
-        tbt_utils.setup_project()
+        tbt_utils.setup_project(name=self.edit_filename.text())
 
     def get_status(self):
         tbt_utils.get_status(self.node_name)

@@ -81,7 +81,7 @@ def create_node(node_name):
     pm.lockNode(node, lock=True)
 
 
-def setup_project():
+def setup_project(name=''):
     """projectSetup"""
 
     # get the scene instance
@@ -117,7 +117,8 @@ def setup_project():
     # Display driver settings
     scene.defaultArnoldDriver.outputMode.set(2)
     scene.defaultArnoldDriver.mergeAOVs.set(1)
-    scene.defaultArnoldDriver.prefix.set('<Scene>/<RenderLayer>')
+    if name: name = name + '_'
+    scene.defaultArnoldDriver.prefix.set('<Scene>/{}<RenderLayer>'.format(name))
 
     # Set yeti plugin premel
     scene.defaultRenderGlobals.preMel.set('pgYetiPreRender')
