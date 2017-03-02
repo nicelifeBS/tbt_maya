@@ -25,12 +25,15 @@ mayaMainWindow= wrapInstance(long(mayaMainWindowPtr), QWidget)
 
 class MainWindow(QWidget):
 
+    node_name = 'tbt_settings'
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self.create_node()
+
         self.resolution = None
         self.aa_samples = None
-        self.node_name = 'tbt_settings'
         self.buttons = []
 
         self.setWindowFlags(Qt.Window)
@@ -46,6 +49,18 @@ class MainWindow(QWidget):
         
     def __setup_widgets(self):
         """Setup menu widgets and add to main layout"""
+
+        # filename input
+        label = QLabel('File name prefix')
+        edit_filename = QLineEdit()
+        edit_filename.textEdited.connect(self.update_filename)
+        # get the set filename
+        status = tbt_utils.get_status(self.node_name)
+        edit_filename.setText(status.get(self.node_name+'.sceneName', ''))
+        layout = QHBoxLayout()
+        layout.addWidget(label)
+        layout.addWidget(edit_filename)
+        self.main_layout.addLayout(layout)
 
         # Default project settings button
         btn_project_setup = PushButton('Set up Project', self)
@@ -82,6 +97,11 @@ class MainWindow(QWidget):
 
         # Render settings
         self.__render_settings_widget()
+
+        # Render buttons
+        btn_batch = PushButton('Render Current Frame', self)
+        btn_batch.clicked.connect(self.render_frame)
+        self.main_layout.addWidget(btn_batch)
 
     def __render_settings_widget(self):
         """
@@ -178,6 +198,9 @@ class MainWindow(QWidget):
             else:
                 i.setStyleSheet('background-color: ')
 
+    def render_frame(self):
+        tbt_utils.render_current_frame()
+
     def setup_project(self):
         tbt_utils.setup_project()
 
@@ -211,6 +234,8 @@ class MainWindow(QWidget):
     def final_render_animation(self):
         tbt_utils.final_render_animation()
 
+    def update_filename(self, text):
+        tbt_utils.set_file_name(str(text))
 
 class PushButton(QPushButton):
 
@@ -224,7 +249,6 @@ class PushButton(QPushButton):
         QPushButton.mouseReleaseEvent(self, event)
         if self.parent:
             self.parent.update_status(button=self)
-
 
 
 def open():

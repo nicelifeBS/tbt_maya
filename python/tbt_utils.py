@@ -313,3 +313,44 @@ def get_filename():
 def set_file_name(name):
     set_status('sceneName', name)
     pm.SCENE.defaultArnoldDriver.prefix.set('<Scene>/{}_<RenderLayer>'.format(name))
+
+
+def export_alembic_bake(start, stop, node, suffix=''):
+    path = pm.workspace.getPath().joinpath(pm.workspace.fileRules['alembicCache'])
+    path = path.joinpath(pm.sceneName().basename().splitext()[0] + suffix + '.abc')
+    print 'export to: ', path
+    print 'start frame: ', start
+    print 'end frame: ', stop
+    opt = '-frameRange {start} {stop} -noNormals -dataFormat ogawa -root |{node} -file \"{path}\"'
+    pm.AbcExport(j=opt.format(
+        start=start, stop=stop, node=node, path=path))
+
+
+def write_alembic(path):
+    import glob
+    import os
+    import pymel.core as pm
+
+    # set the project directory file needs to be in root of our project directory!
+    project_path = os.path.dirname(path)
+    print 'Setting project to: ', project_path
+    pm.workspace.open(project_path)
+    # open the file
+    pm.openFile(path, open=True, force=True)
+    # get the reference
+    refs = pm.ls('*horseHeadRig*', type='reference')
+    rig_path = pm.workspace.path.dirname().joinpath('Horse_rig')
+    # get the most recent rig in our folder
+    files = glob.glob(rig_path + '/*')
+    new_path = max(files, key=os.path.getctime)
+    # change reference path
+    for ref in refs:
+        ref.referenceFile().replaceWith(new_path)
+        print 'reference file: ', ref.referenceFile()
+
+    end = pm.playbackOptions(aet=True, query=True)
+    node = pm.ls('*:render_GEO_GRP')[0]
+    if node:
+        export_alembic_bake(0, end, node.longName())
+    else:
+        raise IOError('Node not found *:render_GEO_GRP')
