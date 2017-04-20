@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import subprocess
 
 cmd = [
     '/Applications/Autodesk/maya2016/Maya.app/Contents/bin/mayapy',
-    'export_alembic.py',
-    sys.argv[1]
+    '/Users/bjoern_siegert/GitHub/tbt_maya/python/export_alembic.py',
+    sys.argv[1],
+    '/Users/bjoern_siegert/Dropbox (Snowgum Films)/Share/Horse/Rendering'
 ]
 
 subprocess.call(cmd)

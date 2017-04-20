@@ -149,11 +149,14 @@ class MainWindow(QWidget):
     def __frame_range_widget(self):
 
         self.field_start_frame = QSpinBox()
-        self.field_start_frame.setValue(1)
         self.field_start_frame.setMaximum(1000)
         self.field_end_frame = QSpinBox()
-        self.field_end_frame.setValue(50)
         self.field_end_frame.setMaximum(1000)
+        # defaults
+        start, end = tbt_utils.get_frame_range()
+        self.field_start_frame.setValue(int(start))
+        self.field_end_frame.setValue(int(end))
+
         h_layout = QHBoxLayout()
         h_layout.addWidget(self.field_start_frame)
         h_layout.addWidget(self.field_end_frame)
@@ -211,6 +214,18 @@ class MainWindow(QWidget):
 
     def create_node(self):
         tbt_utils.create_node(self.node_name)
+        # msg_box = QMessageBox()
+        # msg_box.setText('Did not find scene settings node. Do you want to Create one?')
+        # msg_box.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
+        # msg_box.setDefaultButton(QMessageBox.Yes)
+        # result = msg_box.exec_()
+        # if result == QMessageBox.Yes:
+        #
+        #     print 'Created %s node' % self.node_name
+        #     return True
+        # else:
+        #     print 'Canceled. No %s node created' % self.node_name
+        #     return False
 
     def setup_render_layer(self):
         tbt_utils.setup_render_layer()

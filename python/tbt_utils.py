@@ -9,8 +9,8 @@ SETTINGS = {
               'final': {'res': RES_FINAL,
                         'aa_samples': 10
                         },
-              'draft': {'res': [RES_FINAL[0] / 2, RES_FINAL[1] / 2],
-                        'aa_samples': 2},
+              'draft': {'res': [RES_FINAL[0]/2, RES_FINAL[1]/2],
+                        'aa_samples': 3},
               'final_oar': {'res': (4480, 1920),
                             'aa_samples': 10},
               }
@@ -65,7 +65,7 @@ def create_node(node_name):
         if 'tbt_settings.sceneName' not in attr_names:
             node.addAttr('sceneName', dt='string')
             logger.info('Added new attribute: sceneName')
-        pm.lockNode(node, lock=True)
+        # pm.lockNode(node, lock=True)
 
         return
 
@@ -119,6 +119,8 @@ def setup_project(name=''):
     scene.defaultArnoldDriver.mergeAOVs.set(1)
     if name: name = name + '_'
     scene.defaultArnoldDriver.prefix.set('<Scene>/{}<RenderLayer>'.format(name))
+    # half precision exrs to save diskspace
+    scene.defaultArnoldDriver.halfPrecision.set(1)
 
     # Set yeti plugin premel
     scene.defaultRenderGlobals.preMel.set('pgYetiPreRender')
@@ -284,11 +286,17 @@ def set_render_settings(preset, pixel_ar=1.0):
     scene.defaultResolution.width.set(width)
     scene.defaultResolution.height.set(height)
     scene.defaultResolution.deviceAspectRatio.set(width / height)
-    # scene.defaultResolution.pixelAspect.set(pixel_ar)
-
+    # samples
     scene.defaultArnoldRenderOptions.AASamples.set(settings['aa_samples'])
+    scene.defaultArnoldRenderOptions.GIDiffuseSamples.set(4)
+    # ray depth
     scene.defaultArnoldRenderOptions.GIDiffuseDepth.set(3)
     scene.defaultArnoldRenderOptions.GIGlossyDepth.set(3)
+    scene.defaultArnoldRenderOptions.autoTransparencyDepth.set(4)
+    scene.defaultArnoldRenderOptions.use_existing_tiled_textures.set(1)
+    scene.defaultArnoldRenderOptions.textureAutomip.set(0)
+    scene.defaultArnoldRenderOptions.log_verbosity.set(1)
+    scene.defaultArnoldFilter.width.set(2.2)
 
 
 def render_current_frame():
@@ -316,6 +324,17 @@ def set_file_name(name):
     pm.SCENE.defaultArnoldDriver.prefix.set('<Scene>/{}_<RenderLayer>'.format(name))
 
 
+def get_frame_range():
+    """Return the current used frame range in scene
+
+    Returns:
+        tuple (float, float): Frame range tuple
+    """
+    start = pm.playbackOptions(ast=True, query=True)
+    end = pm.playbackOptions(aet=True, query=True)
+    return start, end
+
+
 def export_alembic_bake(start, stop, node, suffix=''):
     path = pm.workspace.getPath().joinpath(pm.workspace.fileRules['alembicCache'])
     path = path.joinpath(pm.sceneName().basename().splitext()[0] + suffix + '.abc')
@@ -327,20 +346,31 @@ def export_alembic_bake(start, stop, node, suffix=''):
         start=start, stop=stop, node=node, path=path))
 
 
-def write_alembic(path):
+def write_alembic(path, proj_dir):
+    """Load maya scene update the horse rig to the latest version found in Horse_rig
+    directory and then export an alembic cache.
+
+    Args:
+        path (str): File path of maya file
+        proj_dir (str): Project directory
+    """
+
     import glob
     import os
     import pymel.core as pm
 
-    # set the project directory file needs to be in root of our project directory!
-    project_path = os.path.dirname(path)
-    print 'Setting project to: ', project_path
-    pm.workspace.open(project_path)
+    print 'Loading abc plugin'
+    pm.loadPlugin('AbcExport.bundle')
+
+    print 'Setting project to: ', proj_dir
+    pm.workspace.open(proj_dir)
     # open the file
     pm.openFile(path, open=True, force=True)
     # get the reference
     refs = pm.ls('*horseHeadRig*', type='reference')
-    rig_path = pm.workspace.path.dirname().joinpath('Horse_rig')
+    rig_path = pm.workspace.path.joinpath('scenes/Horse_rig')
+    if not os.path.exists(rig_path):
+        raise IOError('Horse_rig directory not found: {}'.format(rig_path))
     # get the most recent rig in our folder
     files = glob.glob(rig_path + '/*')
     new_path = max(files, key=os.path.getctime)
