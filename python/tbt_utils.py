@@ -15,6 +15,10 @@ SETTINGS = {
                             'aa_samples': 10},
               }
 
+# Rig types: currently two
+head = 'head'
+body = 'body'
+
 # projectSetup
 # setCamera
 # renderPasses
@@ -346,7 +350,7 @@ def export_alembic_bake(start, stop, node, suffix=''):
         start=start, stop=stop, node=node, path=path))
 
 
-def write_alembic(path, proj_dir):
+def write_alembic(path, proj_dir, rig_type=head):
     """Load maya scene update the horse rig to the latest version found in Horse_rig
     directory and then export an alembic cache.
 
@@ -366,11 +370,19 @@ def write_alembic(path, proj_dir):
     pm.workspace.open(proj_dir)
     # open the file
     pm.openFile(path, open=True, force=True)
+
     # get the reference
-    refs = pm.ls('*horseHeadRig*', type='reference')
-    rig_path = pm.workspace.path.joinpath('scenes/Horse_rig')
-    if not os.path.exists(rig_path):
+    rig_path = None
+    if rig_type == head:
+        refs = pm.ls('*horseHeadRig*', type='reference')
+        rig_path = pm.workspace.path.joinpath('scenes/Horse_rig')
+    if rig_type == body:
+        # todo: check and change file path
+        refs = pm.ls('*HorseBodyRig*', type='reference')
+        rig_path = pm.workspace.path.joinpath('scenes/HorseBody_rig')
+    if not rig_path or not os.path.exists(rig_path):
         raise IOError('Horse_rig directory not found: {}'.format(rig_path))
+
     # get the most recent rig in our folder
     files = glob.glob(rig_path + '/*')
     new_path = max(files, key=os.path.getctime)
@@ -380,7 +392,10 @@ def write_alembic(path, proj_dir):
         print 'reference file: ', ref.referenceFile()
 
     end = pm.playbackOptions(aet=True, query=True)
-    node = pm.ls('*:render_GEO_GRP')[0]
+    if rig_type == body:
+        node = pm.ls('*:Grp_Mesh')[0]
+    else:
+        node = pm.ls('*:render_GEO_GRP')[0]
     if node:
         export_alembic_bake(0, end, node.longName())
     else:
