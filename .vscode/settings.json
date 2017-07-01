@@ -1,0 +1,5 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+     //"python.venvPath": "~/virtual_envs"
+    "python.pythonPath": "/Users/bjoern_siegert/virtual_envs/maya_dev/bin/python"
+}
