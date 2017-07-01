@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import subprocess
+
+
+cmd = [
+    '/Applications/Autodesk/maya2016/Maya.app/Contents/bin/mayapy',
+    '/Users/bjoern_siegert/GitHub/tbt_maya/python/export_alembic_custom.py'
+]
+
+subprocess.call(cmd)
