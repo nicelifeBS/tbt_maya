@@ -6,10 +6,12 @@ to your install directories
 """
 
 import subprocess
+import sys
 
 cmd = [
     '/Applications/Autodesk/maya2016/Maya.app/Contents/bin/mayapy',
     '/Users/bjoern_siegert/GitHub/tbt_maya/python/export_alembic_custom.py',
+    sys.argv[1]
 ]
 
 subprocess.call(cmd)

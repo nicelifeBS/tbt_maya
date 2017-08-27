@@ -38,8 +38,8 @@ def export_alembic_bake(start, stop, options, suffix=''):
 
 
 def write_alembic(nodes):
-    """Load maya scene update the horse rig to the latest version found in Horse_rig
-    directory and then export an alembic cache.
+    """Export given nodes as alembic abc file. Start and end frame are looked up
+    by querying the playback options
     Args:
         nodes (list): list of node locations
     """
@@ -57,8 +57,12 @@ def write_alembic(nodes):
         raise IOError('Nodes not found')
 
 # scene file and project to load
-scene = '/Users/bjoern_siegert/Dropbox (Snowgum Films)/Share/Horse/Rendering_FullBodyHorse/scenes/TB_01090/TB_01090_AnimateHorse_v01_clean.mb'
+#scene = '/Users/bjoern_siegert/Dropbox (Snowgum Films)/Share/Horse/Rendering_FullBodyHorse/scenes/TB_01130/TB_01130_AnimateHorse_v03_bsi.mb'
 project = '/Users/bjoern_siegert/Dropbox (Snowgum Films)/Share/Horse/Rendering_FullBodyHorse'
+
+scene = sys.argv[1]
+
+print 'Trying to load scene:\n{}'.format(scene)
 
 if not os.path.exists(scene):
     raise IOError('File {} does not exist'.format(scene))
